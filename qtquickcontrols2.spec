@@ -4,7 +4,7 @@
 #
 Name     : qtquickcontrols2
 Version  : 5.11.1
-Release  : 8
+Release  : 9
 URL      : http://download.qt.io/official_releases/qt/5.11/5.11.1/submodules/qtquickcontrols2-everywhere-src-5.11.1.tar.xz
 Source0  : http://download.qt.io/official_releases/qt/5.11/5.11.1/submodules/qtquickcontrols2-everywhere-src-5.11.1.tar.xz
 Summary  : No detailed summary available
@@ -12,7 +12,8 @@ Group    : Development/Tools
 License  : GFDL-1.3 GPL-2.0 GPL-3.0 LGPL-3.0 MIT
 Requires: qtquickcontrols2-lib
 Requires: qtquickcontrols2-license
-BuildRequires : cmake
+BuildRequires : buildreq-cmake
+BuildRequires : buildreq-qmake
 BuildRequires : mesa-dev
 BuildRequires : pkgconfig(Qt5Core)
 BuildRequires : pkgconfig(Qt5Gui)
@@ -23,9 +24,6 @@ BuildRequires : pkgconfig(Qt5Sql)
 BuildRequires : pkgconfig(Qt5Svg)
 BuildRequires : pkgconfig(Qt5Test)
 BuildRequires : pkgconfig(Qt5Widgets)
-BuildRequires : qtbase-dev
-BuildRequires : qtbase-extras
-BuildRequires : qtdeclarative-extras
 
 %description
 Qt Quick Controls 2
@@ -72,15 +70,15 @@ test -r config.log && cat config.log
 make  %{?_smp_mflags}
 
 %install
-export SOURCE_DATE_EPOCH=1530978503
+export SOURCE_DATE_EPOCH=1535164338
 rm -rf %{buildroot}
 mkdir -p %{buildroot}/usr/share/doc/qtquickcontrols2
-cp LICENSE.GPLv3 %{buildroot}/usr/share/doc/qtquickcontrols2/LICENSE.GPLv3
-cp LICENSE.LGPLv3 %{buildroot}/usr/share/doc/qtquickcontrols2/LICENSE.LGPLv3
-cp LICENSE.GPL3 %{buildroot}/usr/share/doc/qtquickcontrols2/LICENSE.GPL3
-cp LICENSE.GPL2 %{buildroot}/usr/share/doc/qtquickcontrols2/LICENSE.GPL2
 cp LICENSE.FDL %{buildroot}/usr/share/doc/qtquickcontrols2/LICENSE.FDL
+cp LICENSE.GPL2 %{buildroot}/usr/share/doc/qtquickcontrols2/LICENSE.GPL2
+cp LICENSE.GPL3 %{buildroot}/usr/share/doc/qtquickcontrols2/LICENSE.GPL3
+cp LICENSE.GPLv3 %{buildroot}/usr/share/doc/qtquickcontrols2/LICENSE.GPLv3
 cp LICENSE.LGPL3 %{buildroot}/usr/share/doc/qtquickcontrols2/LICENSE.LGPL3
+cp LICENSE.LGPLv3 %{buildroot}/usr/share/doc/qtquickcontrols2/LICENSE.LGPLv3
 cp src/imports/controls/material/LICENSE_ANGULARJS.txt %{buildroot}/usr/share/doc/qtquickcontrols2/src_imports_controls_material_LICENSE_ANGULARJS.txt
 %make_install
 
