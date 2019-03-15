@@ -4,6 +4,7 @@ libQt5QuickControls2.so.5:Qt_5.1
 libQt5QuickControls2.so.5:Qt_5.10
 libQt5QuickControls2.so.5:Qt_5.11
 libQt5QuickControls2.so.5:Qt_5.12
+libQt5QuickControls2.so.5:Qt_5.12.2_PRIVATE_API
 libQt5QuickControls2.so.5:Qt_5.2
 libQt5QuickControls2.so.5:Qt_5.3
 libQt5QuickControls2.so.5:Qt_5.4
@@ -12,7 +13,6 @@ libQt5QuickControls2.so.5:Qt_5.6
 libQt5QuickControls2.so.5:Qt_5.7
 libQt5QuickControls2.so.5:Qt_5.8
 libQt5QuickControls2.so.5:Qt_5.9
-libQt5QuickControls2.so.5:Qt_5_PRIVATE_API
 libQt5QuickControls2.so.5:_ZN11QQuickColor11qt_metacallEN11QMetaObject4CallEiPPv
 libQt5QuickControls2.so.5:_ZN11QQuickColor11qt_metacastEPKc
 libQt5QuickControls2.so.5:_ZN11QQuickColorC1EP7QObject
@@ -282,7 +282,7 @@ libQt5QuickControls2.so.5:_ZThn32_N15QQuickItemGroup24itemImplicitWidthChangedEP
 libQt5QuickControls2.so.5:_ZThn32_N15QQuickItemGroup25itemImplicitHeightChangedEP10QQuickItem
 libQt5QuickControls2.so.5:_ZThn32_N15QQuickItemGroupD0Ev
 libQt5QuickControls2.so.5:_ZThn32_N15QQuickItemGroupD1Ev
-libQt5QuickTemplates2.so.5:Qt_5_PRIVATE_API
+libQt5QuickTemplates2.so.5:Qt_5.12.2_PRIVATE_API
 libQt5QuickTemplates2.so.5:_ZN10QQuickDial10setPressedEb
 libQt5QuickTemplates2.so.5:_ZN10QQuickDial10touchEventEP11QTouchEvent
 libQt5QuickTemplates2.so.5:_ZN10QQuickDial10wheelEventEP11QWheelEvent
@@ -840,6 +840,7 @@ libQt5QuickTemplates2.so.5:_ZN13QQuickControl12resetPaddingEv
 libQt5QuickTemplates2.so.5:_ZN13QQuickControl12resetPaletteEv
 libQt5QuickTemplates2.so.5:_ZN13QQuickControl12resetSpacingEv
 libQt5QuickTemplates2.so.5:_ZN13QQuickControl12setLeftInsetEd
+libQt5QuickTemplates2.so.5:_ZN13QQuickControl13enabledChangeEv
 libQt5QuickTemplates2.so.5:_ZN13QQuickControl13focusOutEventEP11QFocusEvent
 libQt5QuickTemplates2.so.5:_ZN13QQuickControl13localeChangedEv
 libQt5QuickTemplates2.so.5:_ZN13QQuickControl13paddingChangeERK9QMarginsFS2_
@@ -2646,6 +2647,7 @@ libQt5QuickTemplates2.so.5:_ZNK17QQuickMenuBarItem4menuEv
 libQt5QuickTemplates2.so.5:_ZNK17QQuickMenuBarItem7menuBarEv
 libQt5QuickTemplates2.so.5:_ZNK17QQuickMenuPrivate10blockInputEP10QQuickItemRK7QPointF
 libQt5QuickTemplates2.so.5:_ZNK17QQuickMenuPrivate14currentSubMenuEv
+libQt5QuickTemplates2.so.5:_ZNK17QQuickMenuPrivate20firstEnabledMenuItemEv
 libQt5QuickTemplates2.so.5:_ZNK17QQuickMenuPrivate6itemAtEi
 libQt5QuickTemplates2.so.5:_ZNK17QQuickPanePrivate15getContentWidthEv
 libQt5QuickTemplates2.so.5:_ZNK17QQuickPanePrivate16getContentHeightEv
