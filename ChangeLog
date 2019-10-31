@@ -1,5 +1,5 @@
-Qt 5.13.1 is a bug-fix release. It maintains both forward and backward
-compatibility (source and binary) with Qt 5.13.0.
+Qt 5.13.2 is a bug-fix release. It maintains both forward and backward
+compatibility (source and binary) with Qt 5.13.0 through 5.13.1.
 
 For more details, refer to the online documentation included in this
 distribution. The documentation is also available online:
@@ -21,11 +21,5 @@ information about a particular change.
 *                                 Controls                                 *
 ****************************************************************************
 
- - [QTBUG-76356] Accessibility: a Switch now has checkbox as its accessibleRole.
- - [QTBUG-75572] Fixed an issue with transforming Shortcut.sequence to string.
- - [QTBUG-75844] The text cursor no longer disappears while dragging it
-   around on iOS with the magnifier showing.
- - [QTBUG-75972] The countChanged signal now will be emitted when a new
-   model is set on a ComboBox.
- - [QTBUG-67343] It's now OK to use a ShaderEffect in a ComboBox delegate
-   (fixed in Qt Quick, tested in Controls 2)
+ - QQuickTextArea:
+   * Fixed rendering issue when using TextArea in a ScrollView.
