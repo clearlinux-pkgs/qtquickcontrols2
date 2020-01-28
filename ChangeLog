@@ -1,6 +1,8 @@
-Qt 5.14 introduces many new features and improvements as well as bugfixes
-over the 5.13.x series. For more details, refer to the online documentation
-included in this distribution. The documentation is also available online:
+Qt 5.14.1 is a bug-fix release. It maintains both forward and backward
+compatibility (source and binary) with Qt 5.14.0.
+
+For more details, refer to the online documentation included in this
+distribution. The documentation is also available online:
 
 https://doc.qt.io/qt-5/index.html
 
@@ -19,33 +21,9 @@ information about a particular change.
 *                                 Controls                                 *
 ****************************************************************************
 
- - ComboBox:
-   * Added valueRole, currentValue and indexOfValue(). These allow
-     convenient management of data for a role associated with the text
-     role.
+ - StackView:
+   * [QTBUG-80353] fixed crash when recursively removing items.
+   * [QTBUG-57267] fix an issue where the current item became hidden.
 
- - QQuickMenuBar:
-   * Fixed issue with dynamically menu bar items not losing their highlight
-     when their menu was dismissed.
-
- - QQuickPopup:
-   * Fixed the issue that Popup doesn't respond to CloseOnEscape if the
-     initial value of visible is true
-
-- [QTBUG-79790] Fixed issue where font changes would result in an extra
-  signal being emitted.
-- [QTBUG-59330] The documentation now advises against naming root resource
-  directories with the same name as a style name.
-- [QTBUG-79302] SplitView: fix issue where Repeater items were not created.
-- [QTBUG-79302] SplitView: fix cursor shape staying as Split*Cursor in some
-  cases.
-- [QTBUG-79270] Fixed assertion failure when hiding a SplitView with only
-  one item.
-
-****************************************************************************
-*                                Universal                                 *
-****************************************************************************
-
- - TabBar:
-   * Disabled wrapping. The Universal style TabBar now behaves like TabBar
-     from other styles.
+ - SplitView:
+   * [QTBUG-79846] fixed hoverable child items breaking handle hover state.
