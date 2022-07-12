@@ -4,7 +4,7 @@
 #
 Name     : qtquickcontrols2
 Version  : 5.15.2
-Release  : 26
+Release  : 27
 URL      : https://download.qt.io/official_releases/qt/5.15/5.15.2/submodules/qtquickcontrols2-everywhere-src-5.15.2.tar.xz
 Source0  : https://download.qt.io/official_releases/qt/5.15/5.15.2/submodules/qtquickcontrols2-everywhere-src-5.15.2.tar.xz
 Summary  : No detailed summary available
@@ -24,6 +24,7 @@ BuildRequires : pkgconfig(Qt5Sql)
 BuildRequires : pkgconfig(Qt5Svg)
 BuildRequires : pkgconfig(Qt5Test)
 BuildRequires : pkgconfig(Qt5Widgets)
+Patch1: qtquickcontrols2-stable-branch.patch
 
 %description
 Qt Quick Controls 2
@@ -70,6 +71,7 @@ license components for the qtquickcontrols2 package.
 %prep
 %setup -q -n qtquickcontrols2-everywhere-src-5.15.2
 cd %{_builddir}/qtquickcontrols2-everywhere-src-5.15.2
+%patch1 -p1
 
 %build
 export http_proxy=http://127.0.0.1:9/
@@ -82,7 +84,7 @@ test -r config.log && cat config.log
 make  %{?_smp_mflags}
 
 %install
-export SOURCE_DATE_EPOCH=1657651039
+export SOURCE_DATE_EPOCH=1657651388
 rm -rf %{buildroot}
 mkdir -p %{buildroot}/usr/share/package-licenses/qtquickcontrols2
 cp %{_builddir}/qtquickcontrols2-everywhere-src-5.15.2/LICENSE.FDL %{buildroot}/usr/share/package-licenses/qtquickcontrols2/61907422fefcd2313a9b570c31d203a6dbebd333
@@ -1037,7 +1039,7 @@ cp %{_builddir}/qtquickcontrols2-everywhere-src-5.15.2/src/imports/controls/mate
 /usr/lib64/qt5/qml/QtQuick/Controls.2/Material/ToolTip.qml
 /usr/lib64/qt5/qml/QtQuick/Controls.2/Material/Tumbler.qml
 /usr/lib64/qt5/qml/QtQuick/Controls.2/Material/VerticalHeaderView.qml
-/usr/lib64/qt5/qml/QtQuick/Controls.2/Material/libqtquickcontrols2materialstyleplugin.so
+/usr/lib64/qt5/qml/QtQuick/Controls.2/Material/libqqc2materialstyleplugin.so
 /usr/lib64/qt5/qml/QtQuick/Controls.2/Material/plugins.qmltypes
 /usr/lib64/qt5/qml/QtQuick/Controls.2/Material/qmldir
 /usr/lib64/qt5/qml/QtQuick/Controls.2/Menu.qml
