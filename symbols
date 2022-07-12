@@ -303,7 +303,6 @@ libQt5QuickTemplates2.so.5:Qt_5.6
 libQt5QuickTemplates2.so.5:Qt_5.7
 libQt5QuickTemplates2.so.5:Qt_5.8
 libQt5QuickTemplates2.so.5:Qt_5.9
-libQt5QuickTemplates2.so.5:_Z32QQuickTemplates_initializeModulev
 libQt5QuickTemplates2.so.5:_ZN10QQuickDial10setPressedEb
 libQt5QuickTemplates2.so.5:_ZN10QQuickDial10touchEventEP11QTouchEvent
 libQt5QuickTemplates2.so.5:_ZN10QQuickDial10wheelEventEP11QWheelEvent
