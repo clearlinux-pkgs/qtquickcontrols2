@@ -4,7 +4,7 @@
 #
 Name     : qtquickcontrols2
 Version  : 5.15.2
-Release  : 27
+Release  : 28
 URL      : https://download.qt.io/official_releases/qt/5.15/5.15.2/submodules/qtquickcontrols2-everywhere-src-5.15.2.tar.xz
 Source0  : https://download.qt.io/official_releases/qt/5.15/5.15.2/submodules/qtquickcontrols2-everywhere-src-5.15.2.tar.xz
 Summary  : No detailed summary available
@@ -84,17 +84,17 @@ test -r config.log && cat config.log
 make  %{?_smp_mflags}
 
 %install
-export SOURCE_DATE_EPOCH=1657651388
+export SOURCE_DATE_EPOCH=1661355844
 rm -rf %{buildroot}
 mkdir -p %{buildroot}/usr/share/package-licenses/qtquickcontrols2
-cp %{_builddir}/qtquickcontrols2-everywhere-src-5.15.2/LICENSE.FDL %{buildroot}/usr/share/package-licenses/qtquickcontrols2/61907422fefcd2313a9b570c31d203a6dbebd333
-cp %{_builddir}/qtquickcontrols2-everywhere-src-5.15.2/LICENSE.GPL2 %{buildroot}/usr/share/package-licenses/qtquickcontrols2/4cc77b90af91e615a64ae04893fdffa7939db84c
-cp %{_builddir}/qtquickcontrols2-everywhere-src-5.15.2/LICENSE.GPL3 %{buildroot}/usr/share/package-licenses/qtquickcontrols2/8624bcdae55baeef00cd11d5dfcfa60f68710a02
-cp %{_builddir}/qtquickcontrols2-everywhere-src-5.15.2/LICENSE.GPLv3 %{buildroot}/usr/share/package-licenses/qtquickcontrols2/30089788de3036faf55f5e5b5846920ee25117f6
-cp %{_builddir}/qtquickcontrols2-everywhere-src-5.15.2/LICENSE.LGPL3 %{buildroot}/usr/share/package-licenses/qtquickcontrols2/f45ee1c765646813b442ca58de72e20a64a7ddba
-cp %{_builddir}/qtquickcontrols2-everywhere-src-5.15.2/LICENSE.LGPLv3 %{buildroot}/usr/share/package-licenses/qtquickcontrols2/7c7e0661b2cf22c323ffec987f1df33d5d60ad38
-cp %{_builddir}/qtquickcontrols2-everywhere-src-5.15.2/examples/quickcontrols2/swipetoremove/fonts/LICENSE.txt %{buildroot}/usr/share/package-licenses/qtquickcontrols2/3a3860b3117eb638f7a7e408e606ed1ef125ebb4
-cp %{_builddir}/qtquickcontrols2-everywhere-src-5.15.2/src/imports/controls/material/LICENSE_ANGULARJS.txt %{buildroot}/usr/share/package-licenses/qtquickcontrols2/0d5ccb6827894b6f0623ce3655b1fd69efa5bf3c
+cp %{_builddir}/qtquickcontrols2-everywhere-src-%{version}/LICENSE.FDL %{buildroot}/usr/share/package-licenses/qtquickcontrols2/61907422fefcd2313a9b570c31d203a6dbebd333
+cp %{_builddir}/qtquickcontrols2-everywhere-src-%{version}/LICENSE.GPL2 %{buildroot}/usr/share/package-licenses/qtquickcontrols2/4cc77b90af91e615a64ae04893fdffa7939db84c
+cp %{_builddir}/qtquickcontrols2-everywhere-src-%{version}/LICENSE.GPL3 %{buildroot}/usr/share/package-licenses/qtquickcontrols2/8624bcdae55baeef00cd11d5dfcfa60f68710a02
+cp %{_builddir}/qtquickcontrols2-everywhere-src-%{version}/LICENSE.GPLv3 %{buildroot}/usr/share/package-licenses/qtquickcontrols2/30089788de3036faf55f5e5b5846920ee25117f6
+cp %{_builddir}/qtquickcontrols2-everywhere-src-%{version}/LICENSE.LGPL3 %{buildroot}/usr/share/package-licenses/qtquickcontrols2/f45ee1c765646813b442ca58de72e20a64a7ddba
+cp %{_builddir}/qtquickcontrols2-everywhere-src-%{version}/LICENSE.LGPLv3 %{buildroot}/usr/share/package-licenses/qtquickcontrols2/7c7e0661b2cf22c323ffec987f1df33d5d60ad38
+cp %{_builddir}/qtquickcontrols2-everywhere-src-%{version}/examples/quickcontrols2/swipetoremove/fonts/LICENSE.txt %{buildroot}/usr/share/package-licenses/qtquickcontrols2/3a3860b3117eb638f7a7e408e606ed1ef125ebb4
+cp %{_builddir}/qtquickcontrols2-everywhere-src-%{version}/src/imports/controls/material/LICENSE_ANGULARJS.txt %{buildroot}/usr/share/package-licenses/qtquickcontrols2/0d5ccb6827894b6f0623ce3655b1fd69efa5bf3c
 %make_install
 
 %files
