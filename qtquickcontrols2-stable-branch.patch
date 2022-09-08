@@ -1,6 +1,3 @@
-Albert Astals Cid (1):
-      Revert "Allow creation of custom QQuickPopupItem-derived types"
-
 Aleix Pol (1):
       Ensure we don't crash when changing sizes after cleanup
 
@@ -28,8 +25,9 @@ Fabian Kosmale (1):
 Henning Gruendl (1):
       QmlDesigner: Fix RangeSliderSpecifics snap mode
 
-Jan Arve Sæther (1):
+Jan Arve Sæther (2):
       a11y: Fix ordering on header, content item and footer in Page
+      Add recursion guard to QQuickApplicationWindowPrivate::relayout()
 
 Jani Heikkinen (2):
       Bump version
@@ -42,7 +40,7 @@ Laszlo Agocs (2):
       Ninepatch: keep resetNode status to not lose track of ImageNode->NinePatchNode changes
       Ensure the ninepatch image is detached
 
-Mitch Curtis (10):
+Mitch Curtis (17):
       Doc: fix SplitView's inheritance
       Doc: fix Qt Labs Platform Menu icon documentation
       Doc: remove all instances of \qmlpropertygroup
@@ -52,17 +50,27 @@ Mitch Curtis (10):
       Imagine: fix GroupBox's bottom edge being clipped
       Allow creation of custom QQuickPopupItem-derived types
       Hide old scroll bars
+      ToolTip: use contentWidth of Text contentItem to account for newlines
+      Fix warnings in some tests
+      Blacklist some flaky tst_qquickdrawer functions on openSUSE
+      Fix SwipeDelegate losing swipes to parent flickables
+      Doc: make it clear that Page doesn't render its title text
+      Revert "Allow creation of custom QQuickPopupItem-derived types"
+      Revert "ToolTip: use contentWidth of Text contentItem to account for newlines"
       Fix scroll bars not showing up when binding to standalone contentItem
 
-Oliver Eftevaag (1):
+Oliver Eftevaag (2):
+      QQuickComboBox: fix acceptableInput being wrong if no validator was set
       QQuickAction: don't grab the same shortcut multiple times
 
-Tarja Sundqvist (5):
+Tarja Sundqvist (7):
       Update commercial license headers
       Revert "Update commercial license headers"
       Bump version
+      Bump version
       Merge remote-tracking branch 'origin/tqtc/lts-5.15.4' into tqtc/lts-5.15-opensource
       Merge remote-tracking branch 'origin/tqtc/lts-5.15.5' into tqtc/lts-5.15-opensource
+      Merge remote-tracking branch 'origin/tqtc/lts-5.15.6' into tqtc/lts-5.15-opensource
 
 Thomas Hartmann (1):
       QmlDesigner: Remove duplicate of repeat
@@ -525,11 +533,51 @@ index 0dab3b978..8610cdfae 100644
      \qmlproperty string QtQuick.Controls::Action::icon.name
      \qmlproperty url QtQuick.Controls::Action::icon.source
      \qmlproperty int QtQuick.Controls::Action::icon.width
+diff --git a/src/quicktemplates2/qquickapplicationwindow.cpp b/src/quicktemplates2/qquickapplicationwindow.cpp
+index 903de6764..bb1b9b159 100644
+--- a/src/quicktemplates2/qquickapplicationwindow.cpp
++++ b/src/quicktemplates2/qquickapplicationwindow.cpp
+@@ -48,6 +48,7 @@
+ #include "qquickdeferredpointer_p_p.h"
+ 
+ #include <QtCore/private/qobject_p.h>
++#include <QtCore/qscopedvaluerollback.h>
+ #include <QtQuick/private/qquickitem_p.h>
+ #include <QtQuick/private/qquickitemchangelistener_p.h>
+ 
+@@ -174,6 +175,7 @@ public:
+     QPalette palette;
+     QQuickItem *activeFocusControl = nullptr;
+     QQuickApplicationWindow *q_ptr = nullptr;
++    bool insideRelayout = false;
+ };
+ 
+ static void layoutItem(QQuickItem *item, qreal y, qreal width)
+@@ -192,9 +194,10 @@ static void layoutItem(QQuickItem *item, qreal y, qreal width)
+ void QQuickApplicationWindowPrivate::relayout()
+ {
+     Q_Q(QQuickApplicationWindow);
+-    if (!complete)
++    if (!complete || insideRelayout)
+         return;
+ 
++    QScopedValueRollback<bool> guard(insideRelayout, true);
+     QQuickItem *content = q->contentItem();
+     qreal hh = header && header->isVisible() ? header->height() : 0;
+     qreal fh = footer && footer->isVisible() ? footer->height() : 0;
 diff --git a/src/quicktemplates2/qquickcombobox.cpp b/src/quicktemplates2/qquickcombobox.cpp
-index 3b87e4898..b715659f1 100644
+index 3b87e4898..e7d99a5dc 100644
 --- a/src/quicktemplates2/qquickcombobox.cpp
 +++ b/src/quicktemplates2/qquickcombobox.cpp
-@@ -265,6 +265,8 @@ public:
+@@ -234,6 +234,7 @@ public:
+     void updateCurrentText();
+     void updateCurrentValue();
+     void updateCurrentTextAndValue();
++    void updateAcceptableInput();
+ 
+     bool isValidIndex(int index) const;
+ 
+@@ -265,6 +266,8 @@ public:
      void itemImplicitWidthChanged(QQuickItem *item) override;
      void itemImplicitHeightChanged(QQuickItem *item) override;
  
@@ -538,7 +586,42 @@ index 3b87e4898..b715659f1 100644
      static void hideOldPopup(QQuickPopup *popup);
  
      bool flat = false;
-@@ -770,6 +772,16 @@ void QQuickComboBoxPrivate::itemImplicitWidthChanged(QQuickItem *item)
+@@ -288,6 +291,7 @@ public:
+     QQmlComponent *delegate = nullptr;
+     QQuickDeferredPointer<QQuickItem> indicator;
+     QQuickDeferredPointer<QQuickPopup> popup;
++    bool m_acceptableInput = true;
+ 
+     struct ExtraData {
+         bool editable = false;
+@@ -476,6 +480,26 @@ void QQuickComboBoxPrivate::updateCurrentTextAndValue()
+     updateCurrentValue();
+ }
+ 
++void QQuickComboBoxPrivate::updateAcceptableInput()
++{
++    Q_Q(QQuickComboBox);
++
++    if (!contentItem)
++        return;
++
++    const QQuickTextInput *textInputContentItem = qobject_cast<QQuickTextInput *>(contentItem);
++
++    if (!textInputContentItem)
++        return;
++
++    const bool newValue = textInputContentItem->hasAcceptableInput();
++
++    if (m_acceptableInput != newValue) {
++        m_acceptableInput = newValue;
++        emit q->acceptableInputChanged();
++    }
++}
++
+ bool QQuickComboBoxPrivate::isValidIndex(int index) const
+ {
+     return delegateModel && index >= 0 && index < delegateModel->count();
+@@ -770,6 +794,16 @@ void QQuickComboBoxPrivate::itemImplicitWidthChanged(QQuickItem *item)
          emit q->implicitIndicatorWidthChanged();
  }
  
@@ -555,7 +638,7 @@ index 3b87e4898..b715659f1 100644
  void QQuickComboBoxPrivate::itemImplicitHeightChanged(QQuickItem *item)
  {
      Q_Q(QQuickComboBox);
-@@ -804,7 +816,8 @@ QQuickComboBox::QQuickComboBox(QQuickItem *parent)
+@@ -804,7 +838,8 @@ QQuickComboBox::QQuickComboBox(QQuickItem *parent)
  #if QT_CONFIG(cursor)
      setCursor(Qt::ArrowCursor);
  #endif
@@ -565,7 +648,7 @@ index 3b87e4898..b715659f1 100644
  }
  
  QQuickComboBox::~QQuickComboBox()
-@@ -1437,11 +1450,7 @@ Qt::InputMethodHints QQuickComboBox::inputMethodHints() const
+@@ -1437,11 +1472,7 @@ Qt::InputMethodHints QQuickComboBox::inputMethodHints() const
  void QQuickComboBox::setInputMethodHints(Qt::InputMethodHints hints)
  {
      Q_D(QQuickComboBox);
@@ -578,7 +661,16 @@ index 3b87e4898..b715659f1 100644
  }
  
  /*!
-@@ -1731,7 +1740,11 @@ void QQuickComboBox::focusInEvent(QFocusEvent *event)
+@@ -1476,7 +1507,7 @@ bool QQuickComboBox::isInputMethodComposing() const
+ bool QQuickComboBox::hasAcceptableInput() const
+ {
+     Q_D(const QQuickComboBox);
+-    return d->contentItem && d->contentItem->property("acceptableInput").toBool();
++    return d->m_acceptableInput;
+ }
+ 
+ /*!
+@@ -1731,7 +1762,11 @@ void QQuickComboBox::focusInEvent(QFocusEvent *event)
  {
      Q_D(QQuickComboBox);
      QQuickControl::focusInEvent(event);
@@ -591,6 +683,31 @@ index 3b87e4898..b715659f1 100644
          d->contentItem->forceActiveFocus(event->reason());
  }
  
+@@ -1913,7 +1948,7 @@ void QQuickComboBox::contentItemChange(QQuickItem *newItem, QQuickItem *oldItem)
+             QObjectPrivate::disconnect(oldInput, &QQuickTextInput::accepted, d, &QQuickComboBoxPrivate::acceptInput);
+             QObjectPrivate::disconnect(oldInput, &QQuickTextInput::textChanged, d, &QQuickComboBoxPrivate::updateEditText);
+             disconnect(oldInput, &QQuickTextInput::inputMethodComposingChanged, this, &QQuickComboBox::inputMethodComposingChanged);
+-            disconnect(oldInput, &QQuickTextInput::acceptableInputChanged, this, &QQuickComboBox::acceptableInputChanged);
++            QObjectPrivate::disconnect(oldInput, &QQuickTextInput::acceptableInputChanged, d, &QQuickComboBoxPrivate::updateAcceptableInput);
+         }
+     }
+     if (newItem && isEditable()) {
+@@ -1922,12 +1957,14 @@ void QQuickComboBox::contentItemChange(QQuickItem *newItem, QQuickItem *oldItem)
+             QObjectPrivate::connect(newInput, &QQuickTextInput::accepted, d, &QQuickComboBoxPrivate::acceptInput);
+             QObjectPrivate::connect(newInput, &QQuickTextInput::textChanged, d, &QQuickComboBoxPrivate::updateEditText);
+             connect(newInput, &QQuickTextInput::inputMethodComposingChanged, this, &QQuickComboBox::inputMethodComposingChanged);
+-            connect(newInput, &QQuickTextInput::acceptableInputChanged, this, &QQuickComboBox::acceptableInputChanged);
++            QObjectPrivate::connect(newInput, &QQuickTextInput::acceptableInputChanged, d, &QQuickComboBoxPrivate::updateAcceptableInput);
+         }
+ #if QT_CONFIG(cursor)
+         newItem->setCursor(Qt::IBeamCursor);
+ #endif
+     }
++
++    d->updateAcceptableInput();
+ }
+ 
+ void QQuickComboBox::localeChange(const QLocale &newLocale, const QLocale &oldLocale)
 diff --git a/src/quicktemplates2/qquickcontainer.cpp b/src/quicktemplates2/qquickcontainer.cpp
 index f38c2b09c..6eed2a024 100644
 --- a/src/quicktemplates2/qquickcontainer.cpp
@@ -889,6 +1006,20 @@ index b8d417f29..c8cd142ae 100644
  }
  
  void QQuickOverlay::geometryChanged(const QRectF &newGeometry, const QRectF &oldGeometry)
+diff --git a/src/quicktemplates2/qquickpage.cpp b/src/quicktemplates2/qquickpage.cpp
+index 0a72bad70..bc27740bc 100644
+--- a/src/quicktemplates2/qquickpage.cpp
++++ b/src/quicktemplates2/qquickpage.cpp
+@@ -244,6 +244,9 @@ QQuickPage::~QQuickPage()
+     The title is often displayed at the top of a page to give
+     the user context about the page they are viewing.
+ 
++    Page does not render the title itself, but instead relies
++    on the application to do so. For example:
++
+     \code
+     ApplicationWindow {
+         visible: true
 diff --git a/src/quicktemplates2/qquickpopup.cpp b/src/quicktemplates2/qquickpopup.cpp
 index 1a7731f4c..bdc6dff27 100644
 --- a/src/quicktemplates2/qquickpopup.cpp
@@ -1166,7 +1297,7 @@ index a3566c560..a06c8d310 100644
      \inqmlmodule QtQuick.Controls
      \since 5.13
 diff --git a/src/quicktemplates2/qquickswipedelegate.cpp b/src/quicktemplates2/qquickswipedelegate.cpp
-index c62142430..b2627f32c 100644
+index c62142430..629bf23df 100644
 --- a/src/quicktemplates2/qquickswipedelegate.cpp
 +++ b/src/quicktemplates2/qquickswipedelegate.cpp
 @@ -713,6 +713,29 @@ QQuickSwipeDelegatePrivate::QQuickSwipeDelegatePrivate(QQuickSwipeDelegate *cont
@@ -1199,7 +1330,21 @@ index c62142430..b2627f32c 100644
  bool QQuickSwipeDelegatePrivate::handleMousePressEvent(QQuickItem *item, QMouseEvent *event)
  {
      Q_Q(QQuickSwipeDelegate);
-@@ -935,13 +958,15 @@ void QQuickSwipeDelegatePrivate::resizeContent()
+@@ -778,9 +801,10 @@ bool QQuickSwipeDelegatePrivate::handleMouseMoveEvent(QQuickItem *item, QMouseEv
+     const QPointF mappedEventPos = item->mapToItem(q, event->pos());
+     const qreal distance = (mappedEventPos - pressPoint).x();
+     if (!q->keepMouseGrab()) {
+-        // Taken from QQuickDrawerPrivate::grabMouse; see comments there.
+-        int threshold = qMax(20, QGuiApplication::styleHints()->startDragDistance() + 5);
+-        const bool overThreshold = QQuickWindowPrivate::dragOverThreshold(distance, Qt::XAxis, event, threshold);
++        // We used to use the custom threshold that QQuickDrawerPrivate::grabMouse used,
++        // but since it's larger than what Flickable uses, it results in Flickable
++        // stealing events from us (QTBUG-50045), so now we use the default.
++        const bool overThreshold = QQuickWindowPrivate::dragOverThreshold(distance, Qt::XAxis, event);
+         if (window && overThreshold) {
+             QQuickItem *grabber = q->window()->mouseGrabberItem();
+             if (!grabber || !grabber->keepMouseGrab()) {
+@@ -935,13 +959,15 @@ void QQuickSwipeDelegatePrivate::resizeContent()
      // If the background and contentItem are repositioned due to a swipe,
      // we don't want to call QQuickControlPrivate's implementation of this function,
      // as it repositions the contentItem to be visible.
@@ -1216,7 +1361,7 @@ index c62142430..b2627f32c 100644
          contentItem->setHeight(q->availableHeight());
      }
  }
-@@ -1025,7 +1050,6 @@ QQuickSwipeDelegate::QQuickSwipeDelegate(QQuickItem *parent)
+@@ -1025,7 +1051,6 @@ QQuickSwipeDelegate::QQuickSwipeDelegate(QQuickItem *parent)
  */
  
  /*!
@@ -1468,18 +1613,19 @@ index 6e5a37dfb..30bd4757f 100644
  QTEST_MAIN(tst_accessibility)
  
 diff --git a/tests/auto/controls/data/tst_combobox.qml b/tests/auto/controls/data/tst_combobox.qml
-index 1c58372ff..eaf9b3c6c 100644
+index 1c58372ff..9bbea26da 100644
 --- a/tests/auto/controls/data/tst_combobox.qml
 +++ b/tests/auto/controls/data/tst_combobox.qml
-@@ -157,6 +157,7 @@ TestCase {
+@@ -157,6 +157,8 @@ TestCase {
          verify(control.delegate)
          verify(control.indicator)
          verify(control.popup)
++        verify(control.acceptableInput)
 +        compare(control.inputMethodHints, Qt.ImhNoPredictiveText)
      }
  
      function test_array() {
-@@ -948,6 +949,56 @@ TestCase {
+@@ -948,6 +950,56 @@ TestCase {
          tryCompare(control.popup, "visible", false)
      }
  
@@ -1536,7 +1682,7 @@ index 1c58372ff..eaf9b3c6c 100644
      function test_mouse() {
          var control = createTemporaryObject(comboBox, testCase, {model: 3, hoverEnabled: false})
          verify(control)
-@@ -1496,7 +1547,7 @@ TestCase {
+@@ -1496,7 +1548,7 @@ TestCase {
          control.editText = ""
          compare(control.acceptableInput, true)
          control.editText = ""
@@ -1545,7 +1691,7 @@ index 1c58372ff..eaf9b3c6c 100644
          keyPress(Qt.Key_A)
          compare(control.editText, "")
          keyPress(Qt.Key_A)
-@@ -1533,7 +1584,7 @@ TestCase {
+@@ -1533,7 +1585,7 @@ TestCase {
  
          compare(control.currentIndex, 0)
          compare(control.currentText, "first")
@@ -1554,7 +1700,7 @@ index 1c58372ff..eaf9b3c6c 100644
          compare(control.activeFocus, true)
  
          control.selectAll()
-@@ -1556,7 +1607,7 @@ TestCase {
+@@ -1556,7 +1608,7 @@ TestCase {
          var control = createTemporaryObject(comboBox, testCase, {editable: true, model: ["Banana", "Coco", "Coconut", "Apple", "Cocomuffin"]})
          verify(control)
  
@@ -1563,7 +1709,7 @@ index 1c58372ff..eaf9b3c6c 100644
          verify(control.activeFocus)
  
          var acceptCount = 0
-@@ -1707,7 +1758,7 @@ TestCase {
+@@ -1707,7 +1759,7 @@ TestCase {
          var control = createTemporaryObject(keysAttachedBox, testCase)
          verify(control)
  
@@ -1572,7 +1718,7 @@ index 1c58372ff..eaf9b3c6c 100644
          verify(control.activeFocus)
  
          verify(!control.gotit)
-@@ -1962,7 +2013,7 @@ TestCase {
+@@ -1962,7 +2014,7 @@ TestCase {
  
          // Give the first ComboBox focus and type in 0 to select "Item 10" (default is "Item 1").
          waitForRendering(comboBox1)
@@ -1581,7 +1727,7 @@ index 1c58372ff..eaf9b3c6c 100644
          verify(comboBox1.activeFocus)
          keyClick(Qt.Key_0)
          compare(comboBox1.editText, "Item 10")
-@@ -1980,7 +2031,7 @@ TestCase {
+@@ -1980,7 +2032,7 @@ TestCase {
  
          // Give focus back to the first ComboBox, and try the same thing except
          // with non-existing text; the currentIndex should not change.
@@ -1590,7 +1736,7 @@ index 1c58372ff..eaf9b3c6c 100644
          verify(comboBox1.activeFocus)
          keySequence(StandardKey.SelectAll)
          compare(comboBox1.contentItem.selectedText, "Item 10")
-@@ -1992,4 +2043,23 @@ TestCase {
+@@ -1992,4 +2044,62 @@ TestCase {
          compare(comboBox1.currentIndex, 9)
          compare(currentIndexSpy.count, 1)
      }
@@ -1612,6 +1758,45 @@ index 1c58372ff..eaf9b3c6c 100644
 +        control.contentItem.forceActiveFocus()
 +        verify(control.activeFocus)
 +        verify(control.contentItem.focus)
++    }
++
++    Component {
++        id: intValidatorComponent
++        IntValidator {
++            bottom: 0
++            top: 255
++        }
++    }
++
++    function test_acceptableInput_QTBUG_94307() {
++        let items = [
++            { text: "A" },
++            { text: "2" },
++            { text: "3" }
++        ]
++        let control = createTemporaryObject(comboBox, testCase, {model: items, editable: true})
++        verify(control)
++
++        verify(control.acceptableInput)
++        compare(control.displayText, "A")
++
++        let acceptableInputSpy = signalSpy.createObject(control, {target: control, signalName: "acceptableInputChanged"})
++        verify(acceptableInputSpy.valid)
++
++        let intValidator = intValidatorComponent.createObject(testCase)
++        verify(intValidator)
++
++        control.validator = intValidator
++
++        compare(acceptableInputSpy.count, 1)
++        compare(control.displayText, "A")
++        compare(control.acceptableInput, false)
++
++        control.currentIndex = 1
++
++        compare(acceptableInputSpy.count, 2)
++        compare(control.displayText, "2")
++        compare(control.acceptableInput, true)
 +    }
  }
 diff --git a/tests/auto/controls/data/tst_dial.qml b/tests/auto/controls/data/tst_dial.qml
@@ -1638,6 +1823,43 @@ index 26f30c33b..e3ad2b2fe 100644
 +        }
 +    }
  }
+diff --git a/tests/auto/controls/data/tst_rangeslider.qml b/tests/auto/controls/data/tst_rangeslider.qml
+index 24f8a2075..d645ec701 100644
+--- a/tests/auto/controls/data/tst_rangeslider.qml
++++ b/tests/auto/controls/data/tst_rangeslider.qml
+@@ -612,7 +612,7 @@ TestCase {
+     }
+ 
+     function test_overlappingHandles() {
+-        var control = createTemporaryObject(sliderComponent, testCase, { orientation: data.orientation })
++        var control = createTemporaryObject(sliderComponent, testCase)
+         verify(control)
+ 
+         // By default, we force the second handle to be after the first in
+@@ -1064,17 +1064,16 @@ TestCase {
+ 
+     function test_valueAt_data() {
+         return [
+-            { tag: "0.0..1.0", from: 0.0, to: 1.0, values: [0.0, 0.2, 0.5, 1.0] },
+-            { tag: "0..100", from: 0, to: 100, values: [0, 20, 50, 100] },
+-            { tag: "100..-100", from: 100, to: -100, values: [100, 60, 0, -100] },
+-            { tag: "-7..7", from: -7, to: 7, stepSize: 1.0, values: [-7.0, -4.0, 0.0, 7.0] },
+-            { tag: "-3..7", from: -3, to: 7, stepSize: 5.0, values: [-3.0, -3.0, 2.0, 7.0] },
++            { tag: "0.0..1.0", properties: { from: 0.0, to: 1.0 }, values: [0.0, 0.2, 0.5, 1.0] },
++            { tag: "0..100", properties: { from: 0, to: 100 }, values: [0, 20, 50, 100] },
++            { tag: "100..-100", properties: { from: 100, to: -100 }, values: [100, 60, 0, -100] },
++            { tag: "-7..7", properties: { from: -7, to: 7, stepSize: 1.0 }, values: [-7.0, -4.0, 0.0, 7.0] },
++            { tag: "-3..7", properties: { from: -3, to: 7, stepSize: 5.0 }, values: [-3.0, -3.0, 2.0, 7.0] },
+         ]
+     }
+ 
+     function test_valueAt(data) {
+-        var control = createTemporaryObject(sliderComponent, testCase,
+-            { from: data.from, to: data.to, stepSize: data.stepSize })
++        var control = createTemporaryObject(sliderComponent, testCase, data.properties)
+         verify(control)
+ 
+         compare(control.valueAt(0.0), data.values[0])
 diff --git a/tests/auto/controls/data/tst_scrollbar.qml b/tests/auto/controls/data/tst_scrollbar.qml
 index 9d21fa8b2..b018899ee 100644
 --- a/tests/auto/controls/data/tst_scrollbar.qml
@@ -1823,11 +2045,180 @@ index 87c395096..cd4931184 100644
 +        verify(horizontalScrollBar.active)
 +    }
  }
+diff --git a/tests/auto/controls/data/tst_slider.qml b/tests/auto/controls/data/tst_slider.qml
+index 280138c5e..e1e1ed97f 100644
+--- a/tests/auto/controls/data/tst_slider.qml
++++ b/tests/auto/controls/data/tst_slider.qml
+@@ -831,16 +831,16 @@ TestCase {
+ 
+     function test_valueAt_data() {
+         return [
+-            { tag: "0.0..1.0", from: 0.0, to: 1.0, values: [0.0, 0.2, 0.5, 1.0] },
+-            { tag: "0..100", from: 0, to: 100, values: [0, 20, 50, 100] },
+-            { tag: "100..-100", from: 100, to: -100, values: [100, 60, 0, -100] },
+-            { tag: "-7..7", from: -7, to: 7, stepSize: 1.0, values: [-7.0, -4.0, 0.0, 7.0] },
+-            { tag: "-3..7", from: -3, to: 7, stepSize: 5.0, values: [-3.0, -3.0, 2.0, 7.0] },
++            { tag: "0.0..1.0", properties: { from: 0.0, to: 1.0 }, values: [0.0, 0.2, 0.5, 1.0] },
++            { tag: "0..100", properties: { from: 0, to: 100 }, values: [0, 20, 50, 100] },
++            { tag: "100..-100", properties: { from: 100, to: -100 }, values: [100, 60, 0, -100] },
++            { tag: "-7..7", properties: { from: -7, to: 7, stepSize: 1.0 }, values: [-7.0, -4.0, 0.0, 7.0] },
++            { tag: "-3..7", properties: { from: -3, to: 7, stepSize: 5.0 }, values: [-3.0, -3.0, 2.0, 7.0] },
+         ]
+     }
+ 
+     function test_valueAt(data) {
+-        var control = createTemporaryObject(slider, testCase, {from: data.from, to: data.to, stepSize: data.stepSize})
++        let control = createTemporaryObject(slider, testCase, data.properties)
+         verify(control)
+ 
+         compare(control.valueAt(0.0), data.values[0])
+diff --git a/tests/auto/controls/data/tst_spinbox.qml b/tests/auto/controls/data/tst_spinbox.qml
+index adb70a307..14ebba218 100644
+--- a/tests/auto/controls/data/tst_spinbox.qml
++++ b/tests/auto/controls/data/tst_spinbox.qml
+@@ -244,17 +244,17 @@ TestCase {
+ 
+     function test_keys_data() {
+         return [
+-            { tag: "1", from: 1, to: 10, value: 1, stepSize: 1, upSteps: [2,3,4], downSteps: [3,2,1,1] },
+-            { tag: "2", from: 1, to: 10, value: 10, stepSize: 2, upSteps: [10,10], downSteps: [8,6,4] },
+-            { tag: "25", from: 0, to: 100, value: 50, stepSize: 25, upSteps: [75,100,100], downSteps: [75,50,25,0,0] },
+-            { tag: "wrap1", wrap: true, from: 1, to: 10, value: 1, stepSize: 1, upSteps: [2,3], downSteps: [2,1,10,9] },
+-            { tag: "wrap2", wrap: true, from: 1, to: 10, value: 10, stepSize: 2, upSteps: [1,3,5], downSteps: [3,1,10,8,6] },
+-            { tag: "wrap25", wrap: true, from: 0, to: 100, value: 50, stepSize: 25, upSteps: [75,100,0,25], downSteps: [0,100,75] }
++            { tag: "1", properties: { from: 1, to: 10, value: 1, stepSize: 1 }, upSteps: [2,3,4], downSteps: [3,2,1,1] },
++            { tag: "2", properties: { from: 1, to: 10, value: 10, stepSize: 2 }, upSteps: [10,10], downSteps: [8,6,4] },
++            { tag: "25", properties: { from: 0, to: 100, value: 50, stepSize: 25 }, upSteps: [75,100,100], downSteps: [75,50,25,0,0] },
++            { tag: "wrap1", properties: { wrap: true, from: 1, to: 10, value: 1, stepSize: 1 }, upSteps: [2,3], downSteps: [2,1,10,9] },
++            { tag: "wrap2", properties: { wrap: true, from: 1, to: 10, value: 10, stepSize: 2 }, upSteps: [1,3,5], downSteps: [3,1,10,8,6] },
++            { tag: "wrap25", properties: { wrap: true, from: 0, to: 100, value: 50, stepSize: 25 }, upSteps: [75,100,0,25], downSteps: [0,100,75] }
+         ]
+     }
+ 
+     function test_keys(data) {
+-        var control = createTemporaryObject(spinBox, testCase, {wrap: data.wrap, from: data.from, to: data.to, value: data.value, stepSize: data.stepSize})
++        var control = createTemporaryObject(spinBox, testCase, data.properties)
+         verify(control)
+ 
+         var upPressedCount = 0
+@@ -396,12 +396,12 @@ TestCase {
+ 
+     function test_wheel_data() {
+         return [
+-            { tag: "1", from: 1, to: 10, value: 1, stepSize: 1, upSteps: [2,3,4], downSteps: [3,2,1,1] },
+-            { tag: "2", from: 1, to: 10, value: 10, stepSize: 2, upSteps: [10,10], downSteps: [8,6,4] },
+-            { tag: "25", from: 0, to: 100, value: 50, stepSize: 25, upSteps: [75,100,100], downSteps: [75,50,25,0,0] },
+-            { tag: "wrap1", wrap: true, from: 1, to: 10, value: 1, stepSize: 1, upSteps: [2,3], downSteps: [2,1,10,9] },
+-            { tag: "wrap2", wrap: true, from: 1, to: 10, value: 10, stepSize: 2, upSteps: [1,3,5], downSteps: [3,1,10,8,6] },
+-            { tag: "wrap25", wrap: true, from: 0, to: 100, value: 50, stepSize: 25, upSteps: [75,100,0,25], downSteps: [0,100,75] }
++            { tag: "1", properties: { from: 1, to: 10, value: 1, stepSize: 1 }, upSteps: [2,3,4], downSteps: [3,2,1,1] },
++            { tag: "2", properties: { from: 1, to: 10, value: 10, stepSize: 2 }, upSteps: [10,10], downSteps: [8,6,4] },
++            { tag: "25", properties: { from: 0, to: 100, value: 50, stepSize: 25 }, upSteps: [75,100,100], downSteps: [75,50,25,0,0] },
++            { tag: "wrap1", properties: { wrap: true, from: 1, to: 10, value: 1, stepSize: 1 }, upSteps: [2,3], downSteps: [2,1,10,9] },
++            { tag: "wrap2", properties: { wrap: true, from: 1, to: 10, value: 10, stepSize: 2 }, upSteps: [1,3,5], downSteps: [3,1,10,8,6] },
++            { tag: "wrap25", properties: { wrap: true, from: 0, to: 100, value: 50, stepSize: 25 }, upSteps: [75,100,0,25], downSteps: [0,100,75] }
+         ]
+     }
+ 
+@@ -409,7 +409,8 @@ TestCase {
+         var ma = createTemporaryObject(mouseArea, testCase, {width: 100, height: 100})
+         verify(ma)
+ 
+-        var control = spinBox.createObject(ma, {wrap: data.wrap, from: data.from, to: data.to, value: data.value, stepSize: data.stepSize, wheelEnabled: true})
++        data.properties.wheelEnabled = true
++        var control = spinBox.createObject(ma, data.properties)
+         verify(control)
+ 
+         var valueModifiedCount = 0
+diff --git a/tests/auto/controls/data/tst_splitview.qml b/tests/auto/controls/data/tst_splitview.qml
+index ae8179b2e..aa1674724 100644
+--- a/tests/auto/controls/data/tst_splitview.qml
++++ b/tests/auto/controls/data/tst_splitview.qml
+@@ -1838,8 +1838,7 @@ TestCase {
+         var flickable = createTemporaryObject(flickableComponent, testCase)
+         verify(flickable)
+ 
+-        var control = threeSizedItemsComponent.createObject(flickable.contentItem,
+-            { "orientation": data.orientation })
++        var control = threeSizedItemsComponent.createObject(flickable.contentItem)
+         verify(control)
+ 
+         control.anchors.fill = undefined
 diff --git a/tests/auto/controls/data/tst_swipedelegate.qml b/tests/auto/controls/data/tst_swipedelegate.qml
-index d37ea42b7..85cb80924 100644
+index d37ea42b7..255dd881e 100644
 --- a/tests/auto/controls/data/tst_swipedelegate.qml
 +++ b/tests/auto/controls/data/tst_swipedelegate.qml
-@@ -1713,4 +1713,39 @@ TestCase {
+@@ -702,7 +702,9 @@ TestCase {
+ 
+                 property alias removeAnimation: onRemoveAnimation
+ 
+-                ListView.onRemove: SequentialAnimation {
++                ListView.onRemove: onRemoveAnimation.start()
++
++                SequentialAnimation {
+                     id: onRemoveAnimation
+ 
+                     PropertyAction {
+@@ -1273,10 +1275,10 @@ TestCase {
+     // When this happens, it will grab the mouse and hence we must clear
+     // that action's pressed state so that it doesn't stay pressed after releasing.
+     function test_dragSideAction() {
+-        var listView = createTemporaryObject(removableDelegatesComponent, testCase);
++        let listView = createTemporaryObject(removableDelegatesComponent, testCase);
+         verify(listView);
+ 
+-        var control = listView.itemAt(0, 0);
++        let control = listView.itemAt(0, 0);
+         verify(control);
+ 
+         // Expose the side action.
+@@ -1284,15 +1286,43 @@ TestCase {
+         verify(control.swipe.leftItem);
+         tryCompare(control.swipe, "complete", true);
+ 
+-        var pressedSpy = signalSpyComponent.createObject(control,
++        let pressedSpy = signalSpyComponent.createObject(control,
+             { target: control.swipe.leftItem.SwipeDelegate, signalName: "pressedChanged" });
+         verify(pressedSpy);
+         verify(pressedSpy.valid);
+ 
++        let movingHorizontallySpy = createTemporaryObject(signalSpyComponent, testCase,
++            { target: listView, signalName: "movingHorizontallyChanged" })
++        verify(movingHorizontallySpy)
++        verify(movingHorizontallySpy.valid)
++
++        let movingVerticallySpy = createTemporaryObject(signalSpyComponent, testCase,
++            { target: listView, signalName: "movingVerticallyChanged" })
++        verify(movingVerticallySpy)
++        verify(movingVerticallySpy.valid)
++
++        let flickingHorizontallySpy = createTemporaryObject(signalSpyComponent, testCase,
++            { target: listView, signalName: "flickingHorizontallyChanged" })
++        verify(flickingHorizontallySpy)
++        verify(flickingHorizontallySpy.valid)
++
++        let flickingVerticallySpy = createTemporaryObject(signalSpyComponent, testCase,
++            { target: listView, signalName: "flickingVerticallyChanged" })
++        verify(flickingVerticallySpy)
++        verify(flickingVerticallySpy.valid)
++
++        // Drag the ListView vertically; its contentY should change.
+         mouseDrag(listView, 20, 20, 0, listView.height);
+         compare(pressedSpy.count, 2);
+-        verify(listView.contentY !== 0);
+ 
++        // Wait for it to stop moving.
++        tryCompare(listView, "flickingVertically", false)
++
++        // 2 because it should change to true then false.
++        compare(movingHorizontallySpy.count, 0)
++        compare(movingVerticallySpy.count, 2)
++        compare(flickingHorizontallySpy.count, 0)
++        compare(flickingVerticallySpy.count, 2)
+         compare(control.swipe.leftItem.SwipeDelegate.pressed, false);
+     }
+ 
+@@ -1713,4 +1743,39 @@ TestCase {
              break;
          }
      }
@@ -1929,6 +2320,146 @@ index 5b3ef6e30..fd8b7d925 100644
 +        compare(tumbler.currentIndex, 4);
 +    }
  }
+diff --git a/tests/auto/qquickapplicationwindow/data/layoutLayout.qml b/tests/auto/qquickapplicationwindow/data/layoutLayout.qml
+new file mode 100644
+index 000000000..24eeb57b2
+--- /dev/null
++++ b/tests/auto/qquickapplicationwindow/data/layoutLayout.qml
+@@ -0,0 +1,65 @@
++/****************************************************************************
++**
++** Copyright (C) 2021 The Qt Company Ltd.
++** Contact: https://www.qt.io/licensing/
++**
++** This file is part of the test suite of the Qt Toolkit.
++**
++** $QT_BEGIN_LICENSE:BSD$
++** Commercial License Usage
++** Licensees holding valid commercial Qt licenses may use this file in
++** accordance with the commercial license agreement provided with the
++** Software or, alternatively, in accordance with the terms contained in
++** a written agreement between you and The Qt Company. For licensing terms
++** and conditions see https://www.qt.io/terms-conditions. For further
++** information use the contact form at https://www.qt.io/contact-us.
++**
++** BSD License Usage
++** Alternatively, you may use this file under the terms of the BSD license
++** as follows:
++**
++** "Redistribution and use in source and binary forms, with or without
++** modification, are permitted provided that the following conditions are
++** met:
++**   * Redistributions of source code must retain the above copyright
++**     notice, this list of conditions and the following disclaimer.
++**   * Redistributions in binary form must reproduce the above copyright
++**     notice, this list of conditions and the following disclaimer in
++**     the documentation and/or other materials provided with the
++**     distribution.
++**   * Neither the name of The Qt Company Ltd nor the names of its
++**     contributors may be used to endorse or promote products derived
++**     from this software without specific prior written permission.
++**
++**
++** THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
++** "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
++** LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
++** A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
++** OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
++** SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
++** LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
++** DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
++** THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
++** (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
++** OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."
++**
++** $QT_END_LICENSE$
++**
++****************************************************************************/
++import QtQuick 2.12
++import QtQuick.Controls 2.12
++import QtQuick.Layouts 1.15
++
++ApplicationWindow {
++    width: 200
++    height: 200
++    visible: true
++
++    header: RowLayout {
++        Rectangle { color: "red"; implicitWidth: 20; implicitHeight: 20; Layout.fillWidth: true}
++    }
++    footer: ColumnLayout {
++        Rectangle { color: "green"; implicitWidth: 20; implicitHeight: 20; Layout.fillWidth: true}
++    }
++}
+diff --git a/tests/auto/qquickapplicationwindow/tst_qquickapplicationwindow.cpp b/tests/auto/qquickapplicationwindow/tst_qquickapplicationwindow.cpp
+index 801242301..ebdc763a7 100644
+--- a/tests/auto/qquickapplicationwindow/tst_qquickapplicationwindow.cpp
++++ b/tests/auto/qquickapplicationwindow/tst_qquickapplicationwindow.cpp
+@@ -76,6 +76,7 @@ private slots:
+     void focusAfterPopupClosed();
+     void clearFocusOnDestruction();
+     void layout();
++    void layoutLayout();
+     void componentComplete();
+ };
+ 
+@@ -862,6 +863,42 @@ void tst_QQuickApplicationWindow::layout()
+     QCOMPARE(content->height(), qreal(window->height()));
+ }
+ 
++void tst_QQuickApplicationWindow::layoutLayout()
++{
++    QQmlEngine engine;
++    QQmlComponent component(&engine);
++    component.loadUrl(testFileUrl("layoutLayout.qml"));
++    QScopedPointer<QObject> object(component.create());
++    QVERIFY2(!object.isNull(), qPrintable(component.errorString()));
++
++    QQuickApplicationWindow* window = qobject_cast<QQuickApplicationWindow*>(object.data());
++    QVERIFY(window);
++    QVERIFY(QTest::qWaitForWindowExposed(window));
++
++    QQuickItem *content = window->contentItem();
++    QVERIFY(content);
++    QQuickItem *header = window->header();
++    QVERIFY(header);
++    QQuickItem *footer = window->footer();
++    QVERIFY(footer);
++
++    QQuickItem *headerChild = header->findChild<QQuickItem*>();
++    QVERIFY(headerChild);
++    QCOMPARE(header->x(), 0.0);
++    QCOMPARE(header->y(), -header->height());
++    QCOMPARE(header->width(), qreal(window->width()));
++    QCOMPARE(headerChild->width(), qreal(window->width()));
++    QVERIFY(header->height() > 0);
++
++    QQuickItem *footerChild = header->findChild<QQuickItem*>();
++    QVERIFY(footerChild);
++    QCOMPARE(footer->x(), 0.0);
++    QCOMPARE(footer->y(), content->height());
++    QCOMPARE(footer->width(), qreal(window->width()));
++    QCOMPARE(footerChild->width(), qreal(window->width()));
++    QVERIFY(footer->height() > 0.0);
++}
++
+ class FriendlyApplicationWindow : public QQuickApplicationWindow
+ {
+     friend class tst_QQuickApplicationWindow;
+diff --git a/tests/auto/qquickdrawer/BLACKLIST b/tests/auto/qquickdrawer/BLACKLIST
+new file mode 100644
+index 000000000..9f3f96be8
+--- /dev/null
++++ b/tests/auto/qquickdrawer/BLACKLIST
+@@ -0,0 +1,8 @@
++# See qtbase/src/testlib/qtestblacklist.cpp for format
++
++# QTBUG-77946
++[slider]
++opensuse-leap
++
++[position]
++opensuse-leap
 diff --git a/tests/auto/qquickheaderview/tst_qquickheaderview.cpp b/tests/auto/qquickheaderview/tst_qquickheaderview.cpp
 index 611e39cb4..f335aa869 100644
 --- a/tests/auto/qquickheaderview/tst_qquickheaderview.cpp
