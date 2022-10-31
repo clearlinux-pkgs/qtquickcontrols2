@@ -19,6 +19,9 @@ Bartlomiej Moskal (2):
 David Redondo (1):
       Unset mouseGrabberPopup if it's removed from children
 
+Eirik Aavitsland (1):
+      Fix memory leak in Qt Quick Controls icon
+
 Fabian Kosmale (1):
       QQuickDial: Keep value integer if everything is integer
 
@@ -40,7 +43,7 @@ Laszlo Agocs (2):
       Ninepatch: keep resetNode status to not lose track of ImageNode->NinePatchNode changes
       Ensure the ninepatch image is detached
 
-Mitch Curtis (17):
+Mitch Curtis (18):
       Doc: fix SplitView's inheritance
       Doc: fix Qt Labs Platform Menu icon documentation
       Doc: remove all instances of \qmlpropertygroup
@@ -57,20 +60,23 @@ Mitch Curtis (17):
       Doc: make it clear that Page doesn't render its title text
       Revert "Allow creation of custom QQuickPopupItem-derived types"
       Revert "ToolTip: use contentWidth of Text contentItem to account for newlines"
+      Blacklist some flaky tst_qquickpopup functions on openSUSE
       Fix scroll bars not showing up when binding to standalone contentItem
 
 Oliver Eftevaag (2):
       QQuickComboBox: fix acceptableInput being wrong if no validator was set
       QQuickAction: don't grab the same shortcut multiple times
 
-Tarja Sundqvist (7):
+Tarja Sundqvist (9):
       Update commercial license headers
       Revert "Update commercial license headers"
+      Bump version
       Bump version
       Bump version
       Merge remote-tracking branch 'origin/tqtc/lts-5.15.4' into tqtc/lts-5.15-opensource
       Merge remote-tracking branch 'origin/tqtc/lts-5.15.5' into tqtc/lts-5.15-opensource
       Merge remote-tracking branch 'origin/tqtc/lts-5.15.6' into tqtc/lts-5.15-opensource
+      Merge remote-tracking branch 'origin/tqtc/lts-5.15.7' into tqtc/lts-5.15-opensource
 
 Thomas Hartmann (1):
       QmlDesigner: Remove duplicate of repeat
@@ -296,6 +302,43 @@ index 3b085c563..cee8e53de 100644
  #if QT_CONFIG(shortcut)
      originalContextMatcher = qt_quick_shortcut_context_matcher();
      qt_quick_set_shortcut_context_matcher(QQuickShortcutContext::matcher);
+diff --git a/src/quickcontrols2/qquickiconimage.cpp b/src/quickcontrols2/qquickiconimage.cpp
+index d86afd7fc..11bb3bcaa 100644
+--- a/src/quickcontrols2/qquickiconimage.cpp
++++ b/src/quickcontrols2/qquickiconimage.cpp
+@@ -42,6 +42,12 @@
+ 
+ QT_BEGIN_NAMESPACE
+ 
++QQuickIconImagePrivate::~QQuickIconImagePrivate()
++{
++    qDeleteAll(icon.entries);
++    icon.entries.clear();
++}
++
+ bool QQuickIconImagePrivate::updateDevicePixelRatio(qreal targetDevicePixelRatio)
+ {
+     if (isThemeIcon) {
+@@ -132,6 +138,7 @@ void QQuickIconImage::setName(const QString &name)
+     if (d->icon.iconName == name)
+         return;
+ 
++    qDeleteAll(d->icon.entries);
+     d->icon = QIconLoader::instance()->loadIcon(name);
+     if (isComponentComplete())
+         d->updateIcon();
+diff --git a/src/quickcontrols2/qquickiconimage_p_p.h b/src/quickcontrols2/qquickiconimage_p_p.h
+index 0c755ff6c..11bf5e92a 100644
+--- a/src/quickcontrols2/qquickiconimage_p_p.h
++++ b/src/quickcontrols2/qquickiconimage_p_p.h
+@@ -59,6 +59,7 @@ class Q_QUICKCONTROLS2_PRIVATE_EXPORT QQuickIconImagePrivate : public QQuickImag
+     Q_DECLARE_PUBLIC(QQuickIconImage)
+ 
+ public:
++    ~QQuickIconImagePrivate() override;
+     void updateIcon();
+     void updateFillMode();
+     qreal calculateDevicePixelRatio() const;
 diff --git a/src/quicktemplates2/accessible/accessible.pri b/src/quicktemplates2/accessible/accessible.pri
 new file mode 100644
 index 000000000..93660b9fe
@@ -2488,6 +2531,20 @@ index 611e39cb4..f335aa869 100644
          return m_cols;
      }
      virtual void setColumnCount(int count)
+diff --git a/tests/auto/qquickpopup/BLACKLIST b/tests/auto/qquickpopup/BLACKLIST
+new file mode 100644
+index 000000000..9246d3010
+--- /dev/null
++++ b/tests/auto/qquickpopup/BLACKLIST
+@@ -0,0 +1,8 @@
++# See qtbase/src/testlib/qtestblacklist.cpp for format
++
++# QTBUG-94251
++[closePolicy]
++opensuse-leap
++
++[cursorShape]
++opensuse-leap
 diff --git a/tests/auto/qquickpopup/data/destroyDuringExitTransition.qml b/tests/auto/qquickpopup/data/destroyDuringExitTransition.qml
 new file mode 100644
 index 000000000..ae72669f4
