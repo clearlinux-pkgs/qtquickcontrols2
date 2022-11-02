@@ -25,6 +25,9 @@ Eirik Aavitsland (1):
 Fabian Kosmale (1):
       QQuickDial: Keep value integer if everything is integer
 
+Harald Sitter (1):
+      implement a11y pressing of qquickabstractbutton
+
 Henning Gruendl (1):
       QmlDesigner: Fix RangeSliderSpecifics snap mode
 
@@ -514,7 +517,7 @@ index 000000000..9b208c141
 +
 +#endif // QACCESSIBLEQUICKPAGE_H
 diff --git a/src/quicktemplates2/qquickabstractbutton.cpp b/src/quicktemplates2/qquickabstractbutton.cpp
-index fc37b6f60..1df0c706d 100644
+index fc37b6f60..b81fbea0b 100644
 --- a/src/quicktemplates2/qquickabstractbutton.cpp
 +++ b/src/quicktemplates2/qquickabstractbutton.cpp
 @@ -387,6 +387,17 @@ void QQuickAbstractButtonPrivate::itemImplicitHeightChanged(QQuickItem *item)
@@ -543,6 +546,31 @@ index fc37b6f60..1df0c706d 100644
      \qmlproperty string QtQuick.Controls::AbstractButton::icon.name
      \qmlproperty url QtQuick.Controls::AbstractButton::icon.source
      \qmlproperty int QtQuick.Controls::AbstractButton::icon.width
+@@ -1177,6 +1187,12 @@ QAccessible::Role QQuickAbstractButton::accessibleRole() const
+     }
+     return QAccessible::Button;
+ }
++
++void QQuickAbstractButton::accessiblePressAction()
++{
++    Q_D(QQuickAbstractButton);
++    d->trigger();
++}
+ #endif
+ 
+ QT_END_NAMESPACE
+diff --git a/src/quicktemplates2/qquickabstractbutton_p.h b/src/quicktemplates2/qquickabstractbutton_p.h
+index 0fa48980e..ab66220d0 100644
+--- a/src/quicktemplates2/qquickabstractbutton_p.h
++++ b/src/quicktemplates2/qquickabstractbutton_p.h
+@@ -209,6 +209,7 @@ protected:
+ #if QT_CONFIG(accessibility)
+     void accessibilityActiveChanged(bool active) override;
+     QAccessible::Role accessibleRole() const override;
++    Q_INVOKABLE void accessiblePressAction();
+ #endif
+ 
+ private:
 diff --git a/src/quicktemplates2/qquickabstractbutton_p_p.h b/src/quicktemplates2/qquickabstractbutton_p_p.h
 index 9291c1a87..b729720f2 100644
 --- a/src/quicktemplates2/qquickabstractbutton_p_p.h
